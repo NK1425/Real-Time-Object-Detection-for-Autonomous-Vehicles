@@ -9,12 +9,14 @@ Live demo: https://huggingface.co/spaces/NK1425/Real-Time-Object-Detection-AV
 import cv2
 import numpy as np
 import gradio as gr
-import torch
 import time
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root AFTER stdlib/site-packages to avoid shadowing installed packages
+_project_root = str(Path(__file__).parent)
+if _project_root not in sys.path:
+    sys.path.append(_project_root)
 
 from models.tracker import ByteTracker
 from models.depth_estimator import MonocularDepthEstimator, OBJECT_HEIGHT_PRIORS
@@ -35,11 +37,13 @@ COCO_TO_AV = {
 
 
 # ── Model loading ──────────────────────────────────────────────────────────────
+# Use ultralytics package directly (avoids torch.hub namespace conflict with our models/)
 print("[App] Loading YOLOv5s (pretrained COCO)...")
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-model.eval()
-model.conf = 0.25
-model.iou  = 0.45
+from ultralytics import YOLO as _YOLO
+_yolo_model = _YOLO('yolov5su.pt')   # ultralytics YOLOv5s (downloads ~14MB automatically)
+_yolo_model.overrides['conf'] = 0.25
+_yolo_model.overrides['iou']  = 0.45
+_yolo_model.overrides['verbose'] = False
 
 depth_est  = MonocularDepthEstimator()
 visualizer = Visualizer(show_depth=True, show_tracks=True, show_bev=True)
@@ -58,32 +62,32 @@ def run_detection(
     if image is None:
         return None, "Upload an image or video frame.", tracker_state
 
-    model.conf = conf_thresh
+    _yolo_model.overrides['conf'] = conf_thresh
     visualizer.show_depth = show_depth
     visualizer.show_tracks = show_tracks
     visualizer.show_bev = show_bev
 
     t0 = time.perf_counter()
-
-    with torch.no_grad():
-        results = model(image, size=640)
-
+    results = _yolo_model.predict(image, imgsz=640, verbose=False)
     inf_ms = (time.perf_counter() - t0) * 1000
 
     # Convert COCO predictions to Detection objects
     detections = []
-    preds = results.xyxy[0].cpu().numpy()
-    for x1, y1, x2, y2, conf, cls_id in preds:
-        cls_id = int(cls_id)
-        if cls_id not in COCO_TO_AV:
-            continue
-        av_name, av_id = COCO_TO_AV[cls_id]
-        det = Detection(
-            bbox=np.array([x1, y1, x2, y2]),
-            confidence=float(conf),
-            class_id=av_id
-        )
-        detections.append(det)
+    boxes = results[0].boxes
+    if boxes is not None and len(boxes):
+        for box in boxes:
+            cls_id = int(box.cls[0].item())
+            conf   = float(box.conf[0].item())
+            if cls_id not in COCO_TO_AV:
+                continue
+            av_name, av_id = COCO_TO_AV[cls_id]
+            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+            det = Detection(
+                bbox=np.array([x1, y1, x2, y2]),
+                confidence=conf,
+                class_id=av_id
+            )
+            detections.append(det)
 
     # Track
     tracker = tracker_state.get('tracker')
@@ -201,7 +205,7 @@ with gr.Blocks(title="AV Object Detection", theme=gr.themes.Soft(), css=CSS) as 
         with gr.TabItem("🖼️ Image Detection"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    img_in  = gr.Image(label="Upload Driving Image", type="numpy", height=320)
+                    img_in  = gr.Image(label="Upload Driving Image", type="numpy", height=320, format="png")
                     conf_s  = gr.Slider(0.10, 0.90, 0.25, step=0.05, label="Confidence Threshold")
                     with gr.Row():
                         d_chk = gr.Checkbox(True,  label="Depth Estimation")

@@ -1,4 +1,5 @@
-# HuggingFace Spaces requirements (CPU-compatible, no TRT)
+# HuggingFace Spaces requirements
+# Note: gradio is installed automatically by HF Spaces from sdk_version in README
 torch>=2.0.0
 torchvision>=0.15.0
 numpy>=1.24.0
@@ -7,4 +8,3 @@ Pillow>=9.5.0
 ultralytics>=8.0.0
 scipy>=1.11.0
 PyYAML>=6.0
-gradio>=4.0.0
