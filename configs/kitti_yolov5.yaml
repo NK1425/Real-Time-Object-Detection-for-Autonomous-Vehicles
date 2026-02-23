@@ -1,0 +1,84 @@
+# KITTI Dataset Configuration for YOLOv5
+path: data/kitti
+train: images/train
+val: images/val
+test: images/test
+
+# Number of classes
+nc: 8
+
+# Class names (KITTI object categories)
+names:
+  0: Car
+  1: Van
+  2: Truck
+  3: Pedestrian
+  4: Person_sitting
+  5: Cyclist
+  6: Tram
+  7: Misc
+
+# Camera intrinsics (KITTI P2 matrix - left color camera)
+camera_intrinsics:
+  fx: 721.5377
+  fy: 721.5377
+  cx: 609.5593
+  cy: 172.8540
+
+# Image dimensions
+img_size: 640
+batch_size: 16
+
+# Anchor boxes (optimized for KITTI)
+anchors:
+  - [10, 13, 16, 30, 33, 23]       # P3/8
+  - [30, 61, 62, 45, 59, 119]      # P4/16
+  - [116, 90, 156, 198, 373, 326]  # P5/32
+
+# Training hyperparameters
+hyp:
+  lr0: 0.01
+  lrf: 0.1
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+  box: 0.05
+  cls: 0.5
+  cls_pw: 1.0
+  obj: 1.0
+  obj_pw: 1.0
+  iou_t: 0.20
+  anchor_t: 4.0
+  fl_gamma: 0.0
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.5
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.1
+  copy_paste: 0.0
+
+# TensorRT optimization settings
+tensorrt:
+  fp32_engine: weights/yolov5_kitti_fp32.engine
+  fp16_engine: weights/yolov5_kitti_fp16.engine
+  int8_engine: weights/yolov5_kitti_int8.engine
+  workspace_size: 4  # GB
+  max_batch_size: 1
+  dynamic_shapes: false
+
+# ByteTrack tracker settings
+tracker:
+  track_thresh: 0.5
+  track_buffer: 30
+  match_thresh: 0.8
+  min_box_area: 10
+  mot20: false

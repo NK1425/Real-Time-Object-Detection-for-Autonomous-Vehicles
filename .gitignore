@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# Weights & models (too large for git)
+weights/*.pt
+weights/*.onnx
+weights/*.engine
+weights/*.cache
+!weights/.gitkeep
+
+# Data (download separately)
+data/kitti/
+data/*.zip
+data/*.tar.gz
+
+# Results
+results/
+*.json
+
+# Jupyter
+.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+runs/
+
+# Temp
+/tmp/

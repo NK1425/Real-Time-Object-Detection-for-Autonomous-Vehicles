@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Real-Time Object Detection for Autonomous Vehicles
+# Jetson Docker Image (JetPack 5.1.2 / L4T r35.4.1)
+# Optimized for: Jetson AGX Orin, Jetson Xavier NX, Jetson Orin Nano
+#
+# Build on Jetson:
+#   docker build -f docker/Dockerfile.jetson -t av-detection:jetson .
+#
+# Run on Jetson:
+#   docker run --runtime nvidia -p 7860:7860 av-detection:jetson
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM nvcr.io/nvidia/l4t-pytorch:r35.4.1-pth2.1-py3
+
+LABEL maintainer="NK1425"
+LABEL description="Real-Time AV Object Detection - Jetson Build"
+LABEL version="1.0"
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libgl1-mesa-glx \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Python deps (ARM64 / aarch64 optimized)
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir -r requirements.txt
+
+# TensorRT Python bindings are pre-installed with JetPack
+# pycuda for TRT inference
+RUN pip3 install --no-cache-dir pycuda
+
+# Copy project
+COPY . .
+RUN mkdir -p weights results data/kitti demo/examples
+
+# Jetson power mode optimization (max performance)
+# Run: sudo nvpmodel -m 0 && sudo jetson_clocks
+ENV OPENBLAS_CORETYPE=ARMV8
+ENV PYTHONPATH=/app
+
+EXPOSE 7860
+
+# Run TRT-accelerated pipeline on Jetson
+CMD ["python3", "demo/gradio_app.py"]

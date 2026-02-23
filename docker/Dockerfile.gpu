@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Real-Time Object Detection for Autonomous Vehicles
+# GPU Docker Image (CUDA 12.1 + TensorRT 8.6 + PyTorch 2.1)
+#
+# Build:
+#   docker build -f docker/Dockerfile.gpu -t av-detection:gpu .
+#
+# Run:
+#   docker run --gpus all -p 7860:7860 av-detection:gpu
+# ─────────────────────────────────────────────────────────────────────────────
+
+FROM nvcr.io/nvidia/tensorrt:23.10-py3
+
+LABEL maintainer="NK1425"
+LABEL description="Real-Time AV Object Detection - GPU Build"
+LABEL version="1.0"
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgl1-mesa-glx \
+    libgstreamer1.0-0 \
+    ffmpeg \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Python deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir torch==2.1.0+cu121 torchvision==0.16.0+cu121 \
+        --extra-index-url https://download.pytorch.org/whl/cu121 && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy project
+COPY . .
+
+# Create directories
+RUN mkdir -p weights results data/kitti demo/examples
+
+# Expose Gradio port
+EXPOSE 7860
+
+# Default: run Gradio demo
+CMD ["python", "demo/gradio_app.py"]
